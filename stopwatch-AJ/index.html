@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cronómetro y Cuenta atrás</title>
+  <style>
+    /* Reset ligero */
+    :root{
+      --bg:#1a1a1a;
+      --text:#ffffff;
+      --accent:#0066ff;
+      --start:#00aa44;
+      --pause:#ffaa00;
+      --reset:#cc3333;
+      --container-radius:12px;
+    }
+    html,body{height:100%;}
+    body{
+      margin:0;
+      font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background:var(--bg);
+      color:var(--text);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+    }
+    .container{
+      width:100%;
+      max-width:400px;
+      background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.05));
+      border-radius:var(--container-radius);
+      padding:40px;
+      box-sizing:border-box;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.02);
+      text-align:center;
+    }
+    @media (max-width:480px){
+      .container{padding:20px;}
+    }
+    .mode-selector{
+      display:flex;
+      gap:8px;
+      margin-bottom:18px;
+      justify-content:center;
+    }
+    .tab{
+      background:transparent;
+      border:1px solid rgba(255,255,255,0.06);
+      color:var(--text);
+      padding:8px 14px;
+      border-radius:8px;
+      cursor:pointer;
+      font-weight:700;
+      text-transform:uppercase;
+      font-size:12px;
+      letter-spacing:0.6px;
+      transition:all 160ms ease;
+    }
+    .tab[aria-pressed="true"]{
+      background:var(--accent);
+      color:#fff;
+      box-shadow: 0 6px 18px rgba(0,102,255,0.14);
+      transform:translateY(-2px);
+    }
+
+    .display{
+      font-family: 'Courier New', Courier, monospace;
+      font-weight:700;
+      font-size:48px;
+      letter-spacing:2px;
+      margin:8px 0 16px 0;
+      color:var(--text);
+    }
+    @media (max-width:480px){
+      .display{font-size:36px;}
+    }
+
+    .input-section{
+      margin-bottom:14px;
+    }
+    .countdown-input{
+      width:160px;
+      padding:8px 10px;
+      border-radius:8px;
+      border:1px solid rgba(255,255,255,0.08);
+      background:rgba(255,255,255,0.02);
+      color:var(--text);
+      font-family:'Courier New', monospace;
+      font-size:16px;
+      text-align:center;
+      outline:none;
+    }
+    .hint{font-size:12px;color:rgba(255,255,255,0.6);margin-top:8px}
+    .error{color:#ff6b6b;font-size:13px;margin-top:8px}
+
+    .controls{
+      display:flex;
+      gap:10px;
+      justify-content:center;
+      margin-top:12px;
+      flex-wrap:wrap;
+    }
+    .btn{
+      border:0;
+      padding:10px 14px;
+      border-radius:10px;
+      color:#fff;
+      font-weight:800;
+      text-transform:uppercase;
+      font-size:14px;
+      cursor:pointer;
+      min-width:90px;
+      transition:transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.45);
+    }
+    .btn:active{transform:translateY(1px) scale(0.996);}
+    .btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+
+    .btn.start{background:var(--start);}
+    .btn.start:hover{box-shadow:0 10px 28px rgba(0,170,68,0.12)}
+    .btn.pause{background:var(--pause);}
+    .btn.pause:hover{box-shadow:0 10px 28px rgba(255,170,0,0.12)}
+    .btn.reset{background:var(--reset);}
+    .btn.reset:hover{box-shadow:0 10px 28px rgba(204,51,51,0.12)}
+
+    .indicator{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:center;
+      margin-top:16px;
+      font-size:13px;
+      color:rgba(255,255,255,0.85);
+    }
+    .dot{
+      width:12px;height:12px;border-radius:50%;background:rgba(255,255,255,0.1);
+      box-shadow:0 3px 8px rgba(0,0,0,0.6);
+    }
+    .dot.active{background:#00cc66;box-shadow:0 6px 18px rgba(0,204,102,0.14)}
+    .dot.paused{background:#ffaa00;box-shadow:0 6px 18px rgba(255,170,0,0.12)}
+
+    .sr-only{position:absolute;left:-10000px;top:auto;width:1px;height:1px;overflow:hidden}
+
+  </style>
+</head>
+<body>
+  <div class="container" role="application" aria-label="Cronómetro y cuenta atrás">
+    <div class="mode-selector" role="tablist" aria-label="Modo">
+      <button class="tab" id="tab-stopwatch" role="tab" aria-pressed="true">Cronómetro</button>
+      <button class="tab" id="tab-countdown" role="tab" aria-pressed="false">Cuenta atrás</button>
+    </div>
+
+    <div class="display" id="timeDisplay" aria-live="polite">00:00:00</div>
+
+    <div class="input-section" id="inputSection">
+  <input id="countdownInput" class="countdown-input" inputmode="numeric" pattern="\d{2}:\d{2}" placeholder="MM:SS (ej. 05:30)" aria-label="Tiempo en formato MM dos puntos SS" />
+  <div class="hint" id="inputHelper">Ejemplo: <strong>05:30</strong> — 5 minutos, 30 segundos</div>
+  <div class="hint">Formato: <strong>MM:SS</strong> (máx 99:59)</div>
+      <div class="error" id="inputError" aria-live="assertive" style="display:none"></div>
+    </div>
+
+    <div class="controls">
+      <button id="startBtn" class="btn start">Iniciar</button>
+      <button id="pauseBtn" class="btn pause" disabled>Pausar</button>
+      <button id="resetBtn" class="btn reset">Reiniciar</button>
+      <button id="muteBtn" class="btn mute" aria-pressed="false" title="Silenciar alarma (M)">Silenciar</button>
+    </div>
+
+    <div class="indicator" id="statusIndicator">
+      <div class="dot" id="statusDot" aria-hidden="true"></div>
+      <div id="statusText">Inactivo</div>
+    </div>
+
+    <div class="hint" style="margin-top:12px;font-size:12px;opacity:0.9">Atajos: <strong>Espacio</strong> iniciar/pausar · <strong>R</strong> reiniciar · <strong>M</strong> silenciar</div>
+
+    <div class="sr-only" id="audioStatus">Audio listo</div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
